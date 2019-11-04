@@ -18,6 +18,23 @@ const {
 
 let coralogixLogger = null;
 
+// todo: sanitizing the secrets should be better handled in the logging framework.
+const sanitize = (params) => {
+  const sanitizedParams = { ...params };
+  Object.keys(sanitize)
+    .forEach((key) => {
+      if (key.match(/^[A-Z0-9_]+$/)) {
+        sanitizedParams[key] = '[undisclosed secret]';
+      }
+    });
+
+  if (sanitizedParams.__ow_headers && sanitizedParams.__ow_headers.authorization) {
+    sanitizedParams.__ow_headers.authorization = '[undisclosed secret]';
+  }
+
+  return sanitizedParams;
+};
+
 function createCoralogixLogger(config, params) {
   const {
     CORALOGIX_API_KEY,
@@ -38,6 +55,7 @@ function createCoralogixLogger(config, params) {
     const [, , owPackage] = actionName.split('/');
     const applicationName = CORALOGIX_APPLICATION_NAME || namespace;
     const subsystemName = CORALOGIX_SUBSYSTEM_NAME || owPackage || 'n/a';
+    const sanitizedParams = sanitize(params);
     coralogixLogger = new CoralogixLogger(CORALOGIX_API_KEY, applicationName, subsystemName, {
       level: CORALOGIX_LOG_LEVEL || config.LOG_LEVEL,
       formatter: (msg, opts) => Object.assign(messageFormatJson(msg, opts), {
@@ -45,7 +63,7 @@ function createCoralogixLogger(config, params) {
           activationId: process.env.__OW_ACTIVATION_ID,
           actionName: process.env.__OW_ACTION_NAME,
           transactionId: process.env.__OW_TRANSACTION_ID,
-          headers: params.__ow_header
+          headers: sanitizedParams.__ow_headers || {},
         },
       }),
     });
