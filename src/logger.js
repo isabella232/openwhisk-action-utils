@@ -23,6 +23,7 @@ const {
 } = require('@adobe/helix-log');
 const createPapertrailLogger = require('./logger-papertrail');
 const createCoralogixLogger = require('./logger-coralogix');
+const { sanitize } = require('./param-sanitizer');
 
 let _config = null;
 function config() {
@@ -198,13 +199,7 @@ function init(params, logger = rootLogger) {
  */
 async function wrap(fn, params = {}, logger = rootLogger) {
   try {
-    const disclosedParams = { ...params };
-    Object.keys(disclosedParams)
-      .forEach((key) => {
-        if (key.match(/^[A-Z0-9_]+$/)) {
-          delete disclosedParams[key];
-        }
-      });
+    const disclosedParams = sanitize(params);
     const log = init(params, logger);
     try {
       log.trace({
@@ -237,4 +232,5 @@ module.exports = {
   init,
   setupHelixLogger,
   setupBunyanLogger,
+  sanitize,
 };
