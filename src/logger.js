@@ -28,7 +28,6 @@ const {
 } = require('@adobe/helix-log');
 const createPapertrailLogger = require('./logger-papertrail');
 const createCoralogixLogger = require('./logger-coralogix');
-const { sanitize } = require('./param-sanitizer');
 
 let _config = null;
 function config() {
@@ -75,7 +74,13 @@ JsonifyForLog.impl(http.ServerResponse, (res) => {
  * transaction id to each log message.
  */
 class OpenWhiskLogger extends MultiLogger {
-  constructor(logger, opts) {
+  constructor(logger, opts, params) {
+    const buildReferrer = () => {
+      if (params && params.__ow_headers) {
+        return `${params.__ow_headers['x-forwarded-proto']}://${params.__ow_headers['x-forwarded-host']}${params.__ow_headers['x-old-url']}`;
+      }
+      return 'n/a';
+    };
     super(logger, {
       ...opts,
       filter: (fields) => ({
@@ -83,6 +88,7 @@ class OpenWhiskLogger extends MultiLogger {
           activationId: process.env.__OW_ACTIVATION_ID || 'n/a',
           actionName: process.env.__OW_ACTION_NAME || 'n/a',
           transactionId: process.env.__OW_TRANSACTION_ID || 'n/a',
+          referrer: buildReferrer(),
         },
         ...fields,
       }),
@@ -120,7 +126,7 @@ const serializers = {
 function setupHelixLogger(params, logger = rootLogger) {
   // add openwhisklogger to helix-log logger
   if (!logger.loggers.has('OpenWhiskLogger')) {
-    const owLogger = new OpenWhiskLogger({});
+    const owLogger = new OpenWhiskLogger({}, null, params);
     logger.loggers.set('OpenWhiskLogger', owLogger);
 
     // add coralogix logger
@@ -204,7 +210,13 @@ function init(params, logger = rootLogger) {
  */
 async function wrap(fn, params = {}, logger = rootLogger) {
   try {
-    const disclosedParams = sanitize(params);
+    const disclosedParams = { ...params };
+    Object.keys(disclosedParams)
+      .forEach((key) => {
+        if (key.match(/^[A-Z0-9_]+$/)) {
+          delete disclosedParams[key];
+        }
+      });
     const log = init(params, logger);
     try {
       log.trace({

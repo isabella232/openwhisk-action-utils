@@ -75,6 +75,7 @@ describe('Loggers', () => {
         actionName: 'n/a',
         activationId: 'n/a',
         transactionId: 'n/a',
+        referrer: 'n/a',
       },
       timestamp: '1970-01-01T00:00:00.000Z',
     }]);
@@ -93,6 +94,32 @@ describe('Loggers', () => {
         actionName: 'test-my-action-name',
         activationId: 'test-my-activation-id',
         transactionId: 'test-transaction-id',
+        referrer: 'n/a',
+      },
+      timestamp: '1970-01-01T00:00:00.000Z',
+    }]);
+  });
+
+  it('openhwisk logging computes the ow referrer field based on __ow_headers', () => {
+    logger.init({
+      __ow_headers: {
+        'x-forwarded-host': 'test.domain.com',
+        'x-forwarded-proto': 'https',
+        'x-old-url': '/index.html?p=v',
+      },
+    }, myRootLogger);
+    myRootLogger.loggers.get('OpenWhiskLogger').loggers.set('mylogger', memLogger);
+    const log = new SimpleInterface({ logger: myRootLogger });
+
+    log.info('Hello, world');
+    assert.deepEqual(memLogger.buf, [{
+      level: 'info',
+      message: ['Hello, world'],
+      ow: {
+        actionName: 'test-my-action-name',
+        activationId: 'test-my-activation-id',
+        transactionId: 'test-transaction-id',
+        referrer: 'https://test.domain.com/index.html?p=v',
       },
       timestamp: '1970-01-01T00:00:00.000Z',
     }]);
@@ -112,6 +139,7 @@ describe('Loggers', () => {
         actionName: 'test-my-action-name',
         activationId: 'test-my-activation-id',
         transactionId: 'test-transaction-id',
+        referrer: 'n/a',
       },
       timestamp: '1970-01-01T00:00:00.000Z',
     }]);
@@ -185,6 +213,7 @@ describe('Loggers', () => {
         actionName: 'test-my-action-name',
         activationId: 'test-my-activation-id',
         transactionId: 'test-transaction-id',
+        referrer: 'n/a',
       },
     });
   });
