@@ -74,13 +74,7 @@ JsonifyForLog.impl(http.ServerResponse, (res) => {
  * transaction id to each log message.
  */
 class OpenWhiskLogger extends MultiLogger {
-  constructor(logger, opts, params) {
-    const buildReferrer = () => {
-      if (params && params.__ow_headers) {
-        return `${params.__ow_headers['x-forwarded-proto']}://${params.__ow_headers['x-forwarded-host']}${params.__ow_headers['x-old-url']}`;
-      }
-      return 'n/a';
-    };
+  constructor(logger, opts) {
     super(logger, {
       ...opts,
       filter: (fields) => ({
@@ -88,7 +82,6 @@ class OpenWhiskLogger extends MultiLogger {
           activationId: process.env.__OW_ACTIVATION_ID || 'n/a',
           actionName: process.env.__OW_ACTION_NAME || 'n/a',
           transactionId: process.env.__OW_TRANSACTION_ID || 'n/a',
-          referrer: buildReferrer(),
         },
         ...fields,
       }),
@@ -126,7 +119,7 @@ const serializers = {
 function setupHelixLogger(params, logger = rootLogger) {
   // add openwhisklogger to helix-log logger
   if (!logger.loggers.has('OpenWhiskLogger')) {
-    const owLogger = new OpenWhiskLogger({}, null, params);
+    const owLogger = new OpenWhiskLogger({}, null);
     logger.loggers.set('OpenWhiskLogger', owLogger);
 
     // add coralogix logger
@@ -218,6 +211,25 @@ async function wrap(fn, params = {}, logger = rootLogger) {
         }
       });
     const log = init(params, logger);
+
+    const buildReferrer = () => {
+      if (params && params.__ow_headers) {
+        const protocol = params.__ow_headers['x-forwarded-proto'];
+        const host = params.__ow_headers['x-forwarded-host'];
+        const url = params.__ow_headers['x-old-url'];
+        if (host) {
+          return `${protocol}://${host}${url}`;
+        } else {
+          return 'Unknown host';
+        }
+      }
+      return 'n/a';
+    };
+
+    if (log.child) {
+      log.child({ ow: { referrer: buildReferrer() } });
+    }
+
     try {
       log.trace({
         params: disclosedParams,
