@@ -188,6 +188,28 @@ function setupBunyanLogger(params, logger = rootLogger) {
 function init(params, logger = rootLogger) {
   setupHelixLogger(params, logger);
   setupBunyanLogger(params, logger);
+
+  const buildReferrer = () => {
+    if (params && params.__ow_headers) {
+      const protocol = params.__ow_headers['x-forwarded-proto'];
+      const host = params.__ow_headers['x-forwarded-host'];
+      const url = params.__ow_headers['x-old-url'];
+      if (host) {
+        return `${protocol}://${host}${url}`;
+      } else {
+        return 'Unknown host';
+      }
+    }
+    return 'n/a';
+  };
+
+  if (params.__ow_logger.child) {
+    // eslint-disable-next-line no-param-reassign
+    params.__ow_logger = params.__ow_logger.child({
+      'x-referrer': buildReferrer(),
+    });
+  }
+
   return params.__ow_logger;
 }
 
@@ -211,24 +233,6 @@ async function wrap(fn, params = {}, logger = rootLogger) {
         }
       });
     const log = init(params, logger);
-
-    const buildReferrer = () => {
-      if (params && params.__ow_headers) {
-        const protocol = params.__ow_headers['x-forwarded-proto'];
-        const host = params.__ow_headers['x-forwarded-host'];
-        const url = params.__ow_headers['x-old-url'];
-        if (host) {
-          return `${protocol}://${host}${url}`;
-        } else {
-          return 'Unknown host';
-        }
-      }
-      return 'n/a';
-    };
-
-    if (log.child) {
-      log.child({ ow: { referrer: buildReferrer() } });
-    }
 
     try {
       log.trace({

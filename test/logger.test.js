@@ -75,7 +75,6 @@ describe('Loggers', () => {
         actionName: 'n/a',
         activationId: 'n/a',
         transactionId: 'n/a',
-        referrer: 'n/a',
       },
       timestamp: '1970-01-01T00:00:00.000Z',
     }]);
@@ -94,7 +93,6 @@ describe('Loggers', () => {
         actionName: 'test-my-action-name',
         activationId: 'test-my-activation-id',
         transactionId: 'test-transaction-id',
-        referrer: 'n/a',
       },
       timestamp: '1970-01-01T00:00:00.000Z',
     }]);
@@ -119,7 +117,6 @@ describe('Loggers', () => {
         actionName: 'test-my-action-name',
         activationId: 'test-my-activation-id',
         transactionId: 'test-transaction-id',
-        referrer: 'https://test.domain.com/index.html?p=v',
       },
       timestamp: '1970-01-01T00:00:00.000Z',
     }]);
@@ -139,9 +136,9 @@ describe('Loggers', () => {
         actionName: 'test-my-action-name',
         activationId: 'test-my-activation-id',
         transactionId: 'test-transaction-id',
-        referrer: 'n/a',
       },
       timestamp: '1970-01-01T00:00:00.000Z',
+      'x-referrer': 'n/a',
     }]);
   });
 
@@ -165,10 +162,12 @@ describe('Loggers', () => {
         path: '/foo',
       },
       timestamp: '1970-01-01T00:00:00.000Z',
+      'x-referrer': 'n/a',
     }, {
       level: 'info',
       message: ['Hello, world.'],
       timestamp: '1970-01-01T00:00:00.000Z',
+      'x-referrer': 'n/a',
     }, {
       level: 'trace',
       message: ['result'],
@@ -176,6 +175,7 @@ describe('Loggers', () => {
         body: 'ok',
       },
       timestamp: '1970-01-01T00:00:00.000Z',
+      'x-referrer': 'n/a',
     }]);
   });
 
@@ -213,8 +213,8 @@ describe('Loggers', () => {
         actionName: 'test-my-action-name',
         activationId: 'test-my-activation-id',
         transactionId: 'test-transaction-id',
-        referrer: 'n/a',
       },
+      'x-referrer': 'n/a',
     });
   });
 
@@ -253,6 +253,6 @@ describe('Loggers', () => {
 
     assert.equal(reqs.length, 2);
     assert.ok(reqs[0].endsWith('test-my-action-name[1]:test-my-activati INFO Hello, world'));
-    assert.ok(reqs[1].endsWith('test-my-action-name[1]:test-my-activati INFO data:{"myId":42}'));
+    assert.ok(reqs[1].endsWith('test-my-action-name[1]:test-my-activati INFO data:{"x-referrer":"n/a","myId":42}'));
   });
 });
