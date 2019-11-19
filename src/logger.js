@@ -77,14 +77,6 @@ class OpenWhiskLogger extends MultiLogger {
   constructor(logger, opts) {
     super(logger, {
       ...opts,
-      filter: (fields) => ({
-        ow: {
-          activationId: process.env.__OW_ACTIVATION_ID || 'n/a',
-          actionName: process.env.__OW_ACTION_NAME || 'n/a',
-          transactionId: process.env.__OW_TRANSACTION_ID || 'n/a',
-        },
-        ...fields,
-      }),
     });
   }
 }
@@ -198,7 +190,7 @@ function init(params, logger = rootLogger) {
         if (!params.__ow_headers) return 'n/a';
         const protocol = params.__ow_headers['x-forwarded-proto'];
         const host = params.__ow_headers['x-forwarded-host'];
-        const url = params.__ow_headers['x-old-url'];
+        const url = params.__ow_headers['x-old-url'] || '';
         if (host) {
           return `${protocol}://${host}${url}`;
         } else {
@@ -209,10 +201,15 @@ function init(params, logger = rootLogger) {
     return 'n/a';
   };
 
-  if (params.__ow_logger.child) {
+  if (params.__ow_logger.child && process.env.__OW_ACTIVATION_ID) {
     // eslint-disable-next-line no-param-reassign
     params.__ow_logger = params.__ow_logger.child({
-      'x-referrer': buildReferrer(),
+      ow: {
+        activationId: process.env.__OW_ACTIVATION_ID || 'n/a',
+        actionName: process.env.__OW_ACTION_NAME || 'n/a',
+        transactionId: process.env.__OW_TRANSACTION_ID || 'n/a',
+        referrer: buildReferrer(),
+      },
     });
   }
 

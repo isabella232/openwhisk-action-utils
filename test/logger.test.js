@@ -16,6 +16,7 @@
 const assert = require('assert');
 const nock = require('nock');
 const net = require('net');
+
 const {
   MultiLogger, MemLogger, SimpleInterface,
 } = require('@adobe/helix-log');
@@ -59,31 +60,25 @@ describe('Loggers', () => {
     }]);
   });
 
-  it('openhwisk logging adds ow fields with defaults', () => {
-    logger.init({}, myRootLogger);
-    myRootLogger.loggers.get('OpenWhiskLogger').loggers.set('mylogger', memLogger);
-    const log = new SimpleInterface({ logger: myRootLogger });
-
+  it('logger does not add ow fields if no activation provided', () => {
     delete process.env.__OW_ACTIVATION_ID;
     delete process.env.__OW_ACTION_NAME;
     delete process.env.__OW_TRANSACTION_ID;
+
+    const log = logger.init({}, myRootLogger);
+    myRootLogger.loggers.get('OpenWhiskLogger').loggers.set('mylogger', memLogger);
+
     log.info('Hello, world');
     assert.deepEqual(memLogger.buf, [{
       level: 'info',
       message: ['Hello, world'],
-      ow: {
-        actionName: 'n/a',
-        activationId: 'n/a',
-        transactionId: 'n/a',
-      },
       timestamp: '1970-01-01T00:00:00.000Z',
     }]);
   });
 
-  it('openhwisk logging adds ow fields', () => {
-    logger.init({}, myRootLogger);
+  it('logger adds ow fields', () => {
+    const log = logger.init({}, myRootLogger);
     myRootLogger.loggers.get('OpenWhiskLogger').loggers.set('mylogger', memLogger);
-    const log = new SimpleInterface({ logger: myRootLogger });
 
     log.info('Hello, world');
     assert.deepEqual(memLogger.buf, [{
@@ -93,13 +88,14 @@ describe('Loggers', () => {
         actionName: 'test-my-action-name',
         activationId: 'test-my-activation-id',
         transactionId: 'test-transaction-id',
+        referrer: 'n/a',
       },
       timestamp: '1970-01-01T00:00:00.000Z',
     }]);
   });
 
   it('openhwisk logging computes the ow referrer field based on __ow_headers', () => {
-    logger.init({
+    const log = logger.init({
       __ow_headers: {
         'x-forwarded-host': 'test.domain.com',
         'x-forwarded-proto': 'https',
@@ -107,7 +103,6 @@ describe('Loggers', () => {
       },
     }, myRootLogger);
     myRootLogger.loggers.get('OpenWhiskLogger').loggers.set('mylogger', memLogger);
-    const log = new SimpleInterface({ logger: myRootLogger });
 
     log.info('Hello, world');
     assert.deepEqual(memLogger.buf, [{
@@ -117,6 +112,7 @@ describe('Loggers', () => {
         actionName: 'test-my-action-name',
         activationId: 'test-my-activation-id',
         transactionId: 'test-transaction-id',
+        referrer: 'https://test.domain.com/index.html?p=v',
       },
       timestamp: '1970-01-01T00:00:00.000Z',
     }]);
@@ -136,9 +132,9 @@ describe('Loggers', () => {
         actionName: 'test-my-action-name',
         activationId: 'test-my-activation-id',
         transactionId: 'test-transaction-id',
+        referrer: 'n/a',
       },
       timestamp: '1970-01-01T00:00:00.000Z',
-      'x-referrer': 'n/a',
     }]);
   });
 
@@ -162,20 +158,35 @@ describe('Loggers', () => {
         path: '/foo',
       },
       timestamp: '1970-01-01T00:00:00.000Z',
-      'x-referrer': 'n/a',
+      ow: {
+        actionName: 'test-my-action-name',
+        activationId: 'test-my-activation-id',
+        referrer: 'n/a',
+        transactionId: 'test-transaction-id',
+      },
     }, {
       level: 'info',
       message: ['Hello, world.'],
       timestamp: '1970-01-01T00:00:00.000Z',
-      'x-referrer': 'n/a',
+      ow: {
+        actionName: 'test-my-action-name',
+        activationId: 'test-my-activation-id',
+        referrer: 'n/a',
+        transactionId: 'test-transaction-id',
+      },
     }, {
       level: 'trace',
       message: ['result'],
+      ow: {
+        actionName: 'test-my-action-name',
+        activationId: 'test-my-activation-id',
+        referrer: 'n/a',
+        transactionId: 'test-transaction-id',
+      },
       result: {
         body: 'ok',
       },
       timestamp: '1970-01-01T00:00:00.000Z',
-      'x-referrer': 'n/a',
     }]);
   });
 
@@ -213,8 +224,8 @@ describe('Loggers', () => {
         actionName: 'test-my-action-name',
         activationId: 'test-my-activation-id',
         transactionId: 'test-transaction-id',
+        referrer: 'n/a',
       },
-      'x-referrer': 'n/a',
     });
   });
 
@@ -253,6 +264,6 @@ describe('Loggers', () => {
 
     assert.equal(reqs.length, 2);
     assert.ok(reqs[0].endsWith('test-my-action-name[1]:test-my-activati INFO Hello, world'));
-    assert.ok(reqs[1].endsWith('test-my-action-name[1]:test-my-activati INFO data:{"x-referrer":"n/a","myId":42}'));
+    assert.ok(reqs[1].endsWith('test-my-action-name[1]:test-my-activati INFO data:{"myId":42}'));
   });
 });
