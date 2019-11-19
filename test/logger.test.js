@@ -97,9 +97,7 @@ describe('Loggers', () => {
   it('openhwisk logging computes the ow referrer field based on __ow_headers', () => {
     const log = logger.init({
       __ow_headers: {
-        'x-forwarded-host': 'test.domain.com',
-        'x-forwarded-proto': 'https',
-        'x-old-url': '/index.html?p=v',
+        'x-referrer': 'https://test.domain.com/index.html?p=v',
       },
     }, myRootLogger);
     myRootLogger.loggers.get('OpenWhiskLogger').loggers.set('mylogger', memLogger);

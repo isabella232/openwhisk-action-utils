@@ -181,26 +181,6 @@ function init(params, logger = rootLogger) {
   setupHelixLogger(params, logger);
   setupBunyanLogger(params, logger);
 
-  const buildReferrer = () => {
-    if (params) {
-      if (params['x-referrer']) {
-        // x-referrer might have already been set previously
-        return params.__ow_headers['x-referrer'];
-      } else {
-        if (!params.__ow_headers) return 'n/a';
-        const protocol = params.__ow_headers['x-forwarded-proto'];
-        const host = params.__ow_headers['x-forwarded-host'];
-        const url = params.__ow_headers['x-old-url'] || '';
-        if (host) {
-          return `${protocol}://${host}${url}`;
-        } else {
-          return 'Unknown host';
-        }
-      }
-    }
-    return 'n/a';
-  };
-
   if (params.__ow_logger.child && process.env.__OW_ACTIVATION_ID) {
     // eslint-disable-next-line no-param-reassign
     params.__ow_logger = params.__ow_logger.child({
@@ -208,7 +188,7 @@ function init(params, logger = rootLogger) {
         activationId: process.env.__OW_ACTIVATION_ID || 'n/a',
         actionName: process.env.__OW_ACTION_NAME || 'n/a',
         transactionId: process.env.__OW_TRANSACTION_ID || 'n/a',
-        referrer: buildReferrer(),
+        referrer: params.__ow_headers && params.__ow_headers['x-referrer'] ? params.__ow_headers['x-referrer'] : 'n/a',
       },
     });
   }
