@@ -190,14 +190,20 @@ function init(params, logger = rootLogger) {
   setupBunyanLogger(params, logger);
 
   const buildReferrer = () => {
-    if (params && params.__ow_headers) {
-      const protocol = params.__ow_headers['x-forwarded-proto'];
-      const host = params.__ow_headers['x-forwarded-host'];
-      const url = params.__ow_headers['x-old-url'];
-      if (host) {
-        return `${protocol}://${host}${url}`;
+    if (params) {
+      if (params['x-referrer']) {
+        // x-referrer might have already been set previously
+        return params.__ow_headers['x-referrer'];
       } else {
-        return 'Unknown host';
+        if (!params.__ow_headers) return 'n/a';
+        const protocol = params.__ow_headers['x-forwarded-proto'];
+        const host = params.__ow_headers['x-forwarded-host'];
+        const url = params.__ow_headers['x-old-url'];
+        if (host) {
+          return `${protocol}://${host}${url}`;
+        } else {
+          return 'Unknown host';
+        }
       }
     }
     return 'n/a';
